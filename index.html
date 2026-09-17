@@ -10,6 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
 :root {
   --font-sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
@@ -67,6 +69,131 @@ html, body {
   color: var(--color-text-secondary);
   margin-top: 3px;
 }
+
+/* 사용자 표시줄 */
+.user-bar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.user-bar span { font-size: 12px; color: var(--color-text-secondary); font-weight: 500; }
+.user-switch-btn {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-secondary);
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+}
+.user-switch-btn:active { background: var(--color-background-secondary); }
+
+/* 이름 등록 오버레이 */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,26,26,0.55);
+  z-index: 1100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-overlay.open { display: flex; }
+.login-card {
+  background: #fff;
+  border-radius: var(--border-radius-lg);
+  padding: 22px 20px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  position: relative;
+}
+.login-close-btn {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 6px;
+}
+.login-card h2 { font-size: 16px; font-weight: 600; margin-bottom: 6px; padding-right: 20px; }
+.login-card p { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 14px; line-height: 1.5; }
+.login-input {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border-secondary);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  margin-bottom: 10px;
+  min-height: 44px;
+}
+.login-submit-btn {
+  width: 100%;
+  padding: 11px;
+  border-radius: var(--border-radius-md);
+  border: none;
+  background: #185FA5;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  min-height: 44px;
+}
+.login-submit-btn:active { background: #12457A; }
+.login-skip-btn {
+  width: 100%;
+  padding: 9px;
+  margin-top: 8px;
+  border-radius: var(--border-radius-md);
+  border: none;
+  background: none;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+.login-existing-label { font-size: 11px; color: var(--color-text-secondary); margin: 14px 0 6px; }
+.login-existing-btn {
+  display: inline-block;
+  font-size: 12px;
+  padding: 6px 11px;
+  margin: 0 6px 6px 0;
+  border-radius: 14px;
+  border: 1px solid var(--color-border-secondary);
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.login-existing-btn:active { background: #e9eaec; }
+
+/* 참여자 진도 목록 (leaderboard) */
+.leaderboard-empty { font-size: 13px; color: var(--color-text-secondary); padding: 24px 8px; text-align: center; }
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border-tertiary);
+  margin-bottom: 6px;
+  background: var(--color-background-primary);
+}
+.lb-row.me { border-color: #85B7EB; background: #EEF4FD; }
+.lb-rank { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); width: 18px; flex-shrink: 0; text-align: center; }
+.lb-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); flex-shrink: 0; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-me-tag { font-size: 10px; font-weight: 500; padding: 1px 6px; border-radius: 4px; background: #185FA5; color: #fff; margin-left: 2px; }
+.lb-bar-wrap { flex: 1; height: 6px; border-radius: 4px; overflow: hidden; background: var(--color-border-tertiary); }
+.lb-bar { height: 100%; border-radius: 4px; background: #378ADD; transition: width 0.3s; }
+.lb-pct { font-size: 12px; font-weight: 600; color: var(--color-text-primary); width: 36px; text-align: right; flex-shrink: 0; }
 
 /* TAB BAR - top sticky under header */
 .tab-bar {
@@ -680,11 +807,16 @@ html, body {
       <span id="total-pct-badge" style="font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;background:#EAF3DE;color:#3B6D11;border:1px solid #97C459;white-space:nowrap;">0%</span>
     </div>
     <p>온누리 공동체 성경읽기표 1독</p>
+    <div class="user-bar" id="user-bar">
+      <span id="user-name-display"></span>
+      <button class="user-switch-btn" id="switch-user-btn">이름 변경</button>
+    </div>
   </div>
 
   <div class="tab-bar">
     <button class="tab-btn active" id="tab-tracker" onclick="switchTab('tracker')">📅 읽기 체크</button>
     <button class="tab-btn" id="tab-stats" onclick="switchTab('stats')">📊 권별 달성률</button>
+    <button class="tab-btn" id="tab-social" onclick="switchTab('social')">👥 함께 읽기</button>
   </div>
 
   <div class="view-content">
@@ -729,6 +861,23 @@ html, body {
       </div>
       <div id="day-list"></div>
     </div>
+
+    <div id="social-view" style="display:none;">
+      <div class="section-title">참여자 진도</div>
+      <div id="leaderboard-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="login-overlay" id="login-overlay">
+  <div class="login-card">
+    <button class="login-close-btn" id="login-close-btn" title="닫기">✕</button>
+    <h2>함께 읽는 분들과 진도를 나눠요</h2>
+    <p>이름을 입력하면 다른 참여자들과 서로의 진행 상황을 확인할 수 있어요.</p>
+    <input type="text" class="login-input" id="login-name-input" placeholder="이름을 입력하세요" maxlength="20">
+    <button class="login-submit-btn" id="login-submit-btn">시작하기</button>
+    <button class="login-skip-btn" id="login-skip-btn">나중에 하기 (이 기기에서만 사용)</button>
+    <div id="login-existing-names"></div>
   </div>
 </div>
 
@@ -756,6 +905,25 @@ html, body {
 
 
 <script>
+// ===== 🔥 Firebase 설정 (Firebase 콘솔 > 프로젝트 설정 > 내 앱 에서 복사한 값으로 교체하세요) =====
+const firebaseConfig = {
+  apiKey: "AIzaSyATvbzsX9ROn52vaXM-4brF6-mO6bQIudA",
+  databaseURL: "https://bible2026-d4264-default-rtdb.firebaseio.com",
+  projectId: "bible2026-d4264"
+};
+// ================================================================================
+
+let fbDb = null;
+try {
+  if (typeof firebase !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('YOUR_') !== 0) {
+    firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.database();
+  }
+} catch (e) {
+  console.warn('Firebase 초기화 실패 (설정값을 확인하세요):', e);
+  fbDb = null;
+}
+
 const MONTHS=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 const OT_BOOKS=["창","출","레","민","신","수","삿","룻","삼상","삼하","열상","열하","대상","대하","스","느","에","욥","시","시편","잠","전","아","사","렘","애","겔","단","호","욜","암","옵","욘","미","나","합","습","학","슥","말"];
 const BOOK_CHAPTERS={"창":50,"출":40,"레":27,"민":36,"신":34,"수":24,"삿":21,"룻":4,"삼상":31,"삼하":24,"열상":22,"열하":25,"대상":29,"대하":36,"스":10,"느":13,"에":10,"욥":42,"시":150,"잠":31,"전":12,"아":8,"사":66,"렘":52,"애":5,"겔":48,"단":12,"호":14,"욜":3,"암":9,"옵":1,"욘":4,"미":7,"나":3,"합":3,"습":3,"학":2,"슥":14,"말":4,"마":28,"막":16,"눅":24,"요":21,"행":28,"롬":16,"고전":16,"고후":13,"갈":6,"엡":6,"빌":4,"골":4,"살전":5,"살후":3,"딤전":6,"딤후":4,"딛":3,"몬":1,"히":13,"약":5,"벧전":5,"벧후":3,"요일":5,"요이":1,"요삼":1,"유":1,"계":22};
@@ -813,7 +981,27 @@ let showDone=false;
 let openBooks={};
 let forceOpenDays={};
 
-function save(){try{localStorage.setItem(KEY,JSON.stringify(checked));}catch(e){} updateTotalPct();}
+// ===== 참여자(이름) 등록 및 진도 공유 =====
+const USER_KEY='bible2026_username';
+let currentUserName='';
+try{currentUserName=localStorage.getItem(USER_KEY)||'';}catch(e){}
+let currentUserKey=currentUserName?nameToKey(currentUserName):'';
+let userCheckedRef=null;
+let usersRef=null;
+let lastUsersSnapshot={};
+
+function nameToKey(name){
+  return name.trim().replace(/[.#$\[\]\/]/g,'_').slice(0,40);
+}
+
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(checked));}catch(e){}
+  if(fbDb&&currentUserKey){
+    fbDb.ref(`users/${currentUserKey}/checked`).set(checked).catch(()=>{});
+    fbDb.ref(`users/${currentUserKey}/updatedAt`).set(Date.now()).catch(()=>{});
+  }
+  updateTotalPct();
+}
 
 const DATA={};
 Object.keys(RAW).forEach(m=>{
@@ -907,21 +1095,30 @@ function buildChapterKeyMap(){
   });
   return map;
 }
-function computeBookStats(){
-  const chapMap=buildChapterKeyMap(),books={};
+let _chapterKeyMapCache=null;
+function getChapterKeyMap(){
+  if(!_chapterKeyMapCache)_chapterKeyMapCache=buildChapterKeyMap();
+  return _chapterKeyMapCache;
+}
+function computeBookStats(checkedObj){
+  checkedObj=checkedObj||checked;
+  const chapMap=getChapterKeyMap(),books={};
   Object.keys(chapMap).forEach(book=>{
     const chapObj=chapMap[book];let done=0,total=0;
-    Object.values(chapObj).forEach(keys=>{total++;if(keys.every(k=>checked[k]))done++;});
+    Object.values(chapObj).forEach(keys=>{total++;if(keys.every(k=>checkedObj[k]))done++;});
     books[book]={done,total,isOT:isOT(book),chapMap:chapObj};
   });
   return books;
 }
-
-function updateTotalPct(){
-  const books=computeBookStats();
+function computeOverallProgress(checkedObj){
+  const books=computeBookStats(checkedObj);
   let total=0,done=0;
   Object.values(books).forEach(v=>{total+=v.total;done+=v.done;});
-  const pct=total?Math.round(done/total*100):0;
+  return{total,done,pct:total?Math.round(done/total*100):0};
+}
+
+function updateTotalPct(){
+  const{pct}=computeOverallProgress();
   const badge=document.getElementById('total-pct-badge');
   if(badge){badge.textContent=pct+'%';}
 }
@@ -930,9 +1127,12 @@ function switchTab(tab){
   curTab=tab;
   document.getElementById('tracker-view').style.display=tab==='tracker'?'block':'none';
   document.getElementById('stats-view').style.display=tab==='stats'?'block':'none';
+  document.getElementById('social-view').style.display=tab==='social'?'block':'none';
   document.getElementById('tab-tracker').className='tab-btn'+(tab==='tracker'?' active':'');
   document.getElementById('tab-stats').className='tab-btn'+(tab==='stats'?' active':'');
+  document.getElementById('tab-social').className='tab-btn'+(tab==='social'?' active':'');
   if(tab==='stats')renderStats();
+  if(tab==='social')renderLeaderboard();
 }
 function renderStats(){
   const books=computeBookStats();
@@ -1291,6 +1491,116 @@ function renderTodayBible() {
   });
 }
 
+// ===== 이름 등록 오버레이 =====
+function showLoginOverlay(){
+  document.getElementById('login-overlay').classList.add('open');
+  document.getElementById('login-name-input').value=currentUserName||'';
+  loadExistingNamesForLogin();
+}
+function hideLoginOverlay(){
+  document.getElementById('login-overlay').classList.remove('open');
+}
+function loadExistingNamesForLogin(){
+  const box=document.getElementById('login-existing-names');
+  if(!box)return;
+  if(!fbDb){box.innerHTML='';return;}
+  fbDb.ref('users').once('value').then(snap=>{
+    const val=snap.val()||{};
+    const names=Object.keys(val).map(k=>(val[k]&&val[k].name)||k).filter(Boolean);
+    if(!names.length){box.innerHTML='';return;}
+    box.innerHTML='<div class="login-existing-label">기존 참여자로 계속하기</div>'+
+      names.map(n=>`<button type="button" class="login-existing-btn" data-name="${n}">${n}</button>`).join('');
+    box.querySelectorAll('.login-existing-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>submitLogin(btn.dataset.name));
+    });
+  }).catch(()=>{box.innerHTML='';});
+}
+function updateUserBar(){
+  const bar=document.getElementById('user-bar');
+  const disp=document.getElementById('user-name-display');
+  if(!bar||!disp)return;
+  if(currentUserName){
+    disp.textContent=`🙋 ${currentUserName}님`;
+    bar.style.display='flex';
+  } else {
+    bar.style.display='none';
+  }
+}
+function submitLogin(name){
+  name=(name||'').trim();
+  if(!name)return;
+  currentUserName=name;
+  currentUserKey=nameToKey(name);
+  try{localStorage.setItem(USER_KEY,currentUserName);}catch(e){}
+  hideLoginOverlay();
+  updateUserBar();
+  attachUserSync();
+}
+
+// ===== Firebase 실시간 동기화 =====
+function attachUserSync(){
+  if(!fbDb||!currentUserKey)return;
+  fbDb.ref(`users/${currentUserKey}/name`).set(currentUserName).catch(()=>{});
+  if(userCheckedRef)userCheckedRef.off();
+  userCheckedRef=fbDb.ref(`users/${currentUserKey}/checked`);
+  userCheckedRef.once('value').then(snap=>{
+    const remote=snap.val();
+    if(remote&&Object.keys(remote).length){
+      // 다른 기기에 저장된 기존 진도를 불러옴
+      checked=remote;
+      try{localStorage.setItem(KEY,JSON.stringify(checked));}catch(e){}
+      renderMonth();if(curTab==='stats')renderStats();updateTotalPct();
+    } else if(Object.keys(checked).length){
+      // 이 기기에 있던 기존 진도를 새로 등록한 이름으로 업로드
+      userCheckedRef.set(checked).catch(()=>{});
+    }
+    // 최초 동기화 이후, 다른 기기에서 갱신되는 내용을 실시간 반영
+    userCheckedRef.on('value',snap2=>{
+      const remote2=snap2.val()||{};
+      checked=remote2;
+      try{localStorage.setItem(KEY,JSON.stringify(checked));}catch(e){}
+      renderMonth();if(curTab==='stats')renderStats();updateTotalPct();
+    });
+  }).catch(()=>{});
+  attachLeaderboardSync();
+}
+function attachLeaderboardSync(){
+  if(!fbDb||usersRef)return;
+  usersRef=fbDb.ref('users');
+  usersRef.on('value',snap=>{
+    lastUsersSnapshot=snap.val()||{};
+    if(curTab==='social')renderLeaderboard();
+  });
+}
+
+// ===== 참여자 진도 목록 (함께 읽기 탭) =====
+function renderLeaderboard(){
+  const box=document.getElementById('leaderboard-list');
+  if(!box)return;
+  if(!fbDb){
+    box.innerHTML='<div class="leaderboard-empty">아직 진도 공유 기능이 설정되지 않았어요.<br>Firebase 연동을 완료하면 참여자들의 진도를 함께 볼 수 있어요.</div>';
+    return;
+  }
+  const rows=Object.keys(lastUsersSnapshot).map(key=>{
+    const u=lastUsersSnapshot[key]||{};
+    const prog=computeOverallProgress(u.checked||{});
+    return{key,name:u.name||key,...prog};
+  }).sort((a,b)=>b.pct-a.pct||b.done-a.done);
+  if(!rows.length){
+    box.innerHTML='<div class="leaderboard-empty">아직 등록된 참여자가 없어요.</div>';
+    return;
+  }
+  box.innerHTML=rows.map((r,i)=>{
+    const isMe=r.key===currentUserKey;
+    return`<div class="lb-row${isMe?' me':''}">
+      <span class="lb-rank">${i+1}</span>
+      <span class="lb-name">${r.name}</span>${isMe?'<span class="lb-me-tag">나</span>':''}
+      <div class="lb-bar-wrap"><div class="lb-bar" style="width:${r.pct}%"></div></div>
+      <span class="lb-pct">${r.pct}%</span>
+    </div>`;
+  }).join('');
+}
+
 document.getElementById('month-all-btn').addEventListener('click',()=>{setMonthAll(curMonth,!getMonthAllDone(curMonth));save();renderMonth();});
 document.getElementById('prev-btn').onclick=()=>{if(curMonth>1){curMonth--;forceOpenDays={};renderMonth();}};
 document.getElementById('next-btn').onclick=()=>{if(curMonth<12){curMonth++;forceOpenDays={};renderMonth();}};
@@ -1299,9 +1609,20 @@ document.getElementById('reader-close-btn').addEventListener('click',closeReader
 document.getElementById('reader-prev-btn').addEventListener('click',()=>{if(readerIdx>0){readerIdx--;renderReader();}});
 document.getElementById('reader-next-btn').addEventListener('click',()=>{if(readerIdx<readerItems.length-1){readerIdx++;renderReader();}});
 document.getElementById('reader-frame').addEventListener('load',()=>{if(readerFallbackTimer)clearTimeout(readerFallbackTimer);});
+document.getElementById('login-submit-btn').addEventListener('click',()=>{submitLogin(document.getElementById('login-name-input').value);});
+document.getElementById('login-name-input').addEventListener('keydown',(e)=>{if(e.key==='Enter')submitLogin(document.getElementById('login-name-input').value);});
+document.getElementById('login-skip-btn').addEventListener('click',hideLoginOverlay);
+document.getElementById('login-close-btn').addEventListener('click',hideLoginOverlay);
+document.getElementById('switch-user-btn').addEventListener('click',showLoginOverlay);
+
 switchTab('tracker');
 renderMonth();
 updateTotalPct();
+updateUserBar();
+if(fbDb){
+  if(currentUserName){attachUserSync();}
+  else{showLoginOverlay();}
+}
 </script>
 </body>
 </html>
