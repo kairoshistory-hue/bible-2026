@@ -794,32 +794,48 @@ html, body {
   justify-content: center;
 }
 .reader-icon-btn:active { background: rgba(255,255,255,0.15); border-radius: 8px; }
-.reader-nav {
+.reader-jump {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--color-background-secondary);
+  overflow-x: auto;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.reader-jump::-webkit-scrollbar { display: none; }
+.reader-jump-chip {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-secondary);
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.reader-jump-chip.active { background: #185FA5; color: #fff; border-color: #185FA5; }
+.reader-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #e5e7eb; min-height: 0; }
+.reader-item { background: #fff; margin-bottom: 8px; }
+.reader-item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 14px;
-  background: var(--color-background-secondary);
-  flex-shrink: 0;
+  padding: 10px 14px;
+  background: #f5f6f8;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--color-border-secondary);
 }
-.reader-nav-btn {
-  padding: 8px 14px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-border-secondary);
-  background: #fff;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--color-text-primary);
-  font-family: var(--font-sans);
-  min-height: 38px;
-  white-space: nowrap;
-}
-.reader-nav-btn:disabled { opacity: 0.35; cursor: default; }
-.reader-progress { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; }
-.reader-frame-wrap { flex: 1; position: relative; background: #fff; min-height: 0; }
-.reader-frame { width: 100%; height: 100%; border: none; display: block; }
-.reader-fallback {
+.reader-item-title { font-size: 13px; font-weight: 700; color: var(--color-text-primary); }
+.reader-item-link { font-size: 12px; color: #185FA5; text-decoration: none; padding: 4px 8px; white-space: nowrap; }
+.reader-item-frame-wrap { position: relative; height: 70vh; min-height: 380px; background: #fff; }
+.reader-item-frame { width: 100%; height: 100%; border: none; display: block; }
+.reader-item-fallback {
   position: absolute;
   inset: 0;
   display: none;
@@ -831,7 +847,7 @@ html, body {
   text-align: center;
   background: #fff;
 }
-.reader-fallback.show { display: flex; }
+.reader-item-fallback.show { display: flex; }
 .reader-fallback-text { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
 .reader-open-new {
   font-size: 13px;
@@ -981,22 +997,11 @@ html, body {
   <div class="reader-header">
     <span class="reader-title" id="reader-title">성경읽기</span>
     <div class="reader-header-btns">
-      <a class="reader-icon-btn" id="reader-open-new" href="#" target="_blank" rel="noopener" title="새 탭에서 열기">↗</a>
       <button class="reader-icon-btn" id="reader-close-btn" title="닫기">✕</button>
     </div>
   </div>
-  <div class="reader-nav">
-    <button class="reader-nav-btn" id="reader-prev-btn">← 이전 장</button>
-    <span class="reader-progress" id="reader-progress"></span>
-    <button class="reader-nav-btn" id="reader-next-btn">다음 장 →</button>
-  </div>
-  <div class="reader-frame-wrap">
-    <iframe class="reader-frame" id="reader-frame" src="about:blank" title="성경읽기"></iframe>
-    <div class="reader-fallback" id="reader-fallback">
-      <div class="reader-fallback-text">외부 사이트 보안 정책으로 인해<br>이 화면에 표시되지 않을 수 있어요.</div>
-      <a class="reader-open-new" id="reader-open-new-fallback" href="#" target="_blank" rel="noopener">새 탭에서 열기</a>
-    </div>
-  </div>
+  <div class="reader-jump" id="reader-jump"></div>
+  <div class="reader-list" id="reader-list"></div>
 </div>
 
 
@@ -1574,46 +1579,74 @@ function getYouTubeUrl() {
   return YOUTUBE_URL;
 }
 
-// 성경읽기 리더 (앱을 나가지 않고 오늘 본문을 이어서 읽기)
+// 성경읽기 리더 (앱을 나가지 않고 오늘 본문을 세로로 이어서 읽기)
 let readerItems=[];
-let readerIdx=0;
-let readerFallbackTimer=null;
+let readerFallbackTimers=[];
 
 function openReader(items,startIdx){
   readerItems=items.slice();
-  readerIdx=startIdx||0;
   document.getElementById('reader-overlay').classList.add('open');
   document.body.style.overflow='hidden';
-  renderReader();
+  renderReader(startIdx||0);
 }
 
 function closeReader(){
   document.getElementById('reader-overlay').classList.remove('open');
-  document.getElementById('reader-frame').src='about:blank';
   document.body.style.overflow='';
-  if(readerFallbackTimer)clearTimeout(readerFallbackTimer);
+  readerFallbackTimers.forEach(t=>clearTimeout(t));
+  readerFallbackTimers=[];
+  // iframe을 완전히 제거해 혹시 재생 중이던 오디오도 함께 정지시킴
+  document.getElementById('reader-list').innerHTML='';
+  document.getElementById('reader-jump').innerHTML='';
 }
 
-function renderReader(){
-  const passage=readerItems[readerIdx];
-  const url=getBibleUrl(passage);
-  const frame=document.getElementById('reader-frame');
-  const fallback=document.getElementById('reader-fallback');
-  fallback.classList.remove('show');
-  document.getElementById('reader-title').textContent=passage||'성경읽기';
-  document.getElementById('reader-progress').textContent=`${readerIdx+1} / ${readerItems.length}`;
-  document.getElementById('reader-prev-btn').disabled=readerIdx<=0;
-  document.getElementById('reader-next-btn').disabled=readerIdx>=readerItems.length-1;
-  document.getElementById('reader-open-new').href=url||'#';
-  document.getElementById('reader-open-new-fallback').href=url||'#';
-  if(readerFallbackTimer)clearTimeout(readerFallbackTimer);
-  if(url){
-    frame.src=url;
+function scrollReaderTo(idx){
+  const el=document.getElementById(`reader-item-${idx}`);
+  if(el)el.scrollIntoView({block:'start'});
+  document.querySelectorAll('.reader-jump-chip').forEach((c,i)=>{c.classList.toggle('active',i===idx);});
+}
+
+function renderReader(startIdx){
+  document.getElementById('reader-title').textContent=`오늘의 성경 · ${readerItems.length}장`;
+  readerFallbackTimers.forEach(t=>clearTimeout(t));
+  readerFallbackTimers=[];
+
+  const jumpHtml=readerItems.map((p,i)=>`<button class="reader-jump-chip${i===startIdx?' active':''}" data-idx="${i}">${p}</button>`).join('');
+  document.getElementById('reader-jump').innerHTML=jumpHtml;
+  document.querySelectorAll('.reader-jump-chip').forEach(btn=>{
+    btn.addEventListener('click',()=>scrollReaderTo(parseInt(btn.dataset.idx,10)));
+  });
+
+  const listHtml=readerItems.map((passage,i)=>{
+    const url=getBibleUrl(passage);
+    return `<div class="reader-item" id="reader-item-${i}">
+      <div class="reader-item-header">
+        <span class="reader-item-title">${passage}</span>
+        <a class="reader-item-link" href="${url||'#'}" target="_blank" rel="noopener">새 탭 ↗</a>
+      </div>
+      <div class="reader-item-frame-wrap">
+        <iframe class="reader-item-frame" id="reader-item-frame-${i}" src="${url||'about:blank'}" title="${passage}"></iframe>
+        <div class="reader-item-fallback" id="reader-item-fallback-${i}">
+          <div class="reader-fallback-text">외부 사이트 보안 정책으로 인해<br>이 화면에 표시되지 않을 수 있어요.</div>
+          <a class="reader-open-new" href="${url||'#'}" target="_blank" rel="noopener">새 탭에서 열기</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('reader-list').innerHTML=listHtml;
+
+  readerItems.forEach((passage,i)=>{
+    const url=getBibleUrl(passage);
+    if(!url)return;
+    const frame=document.getElementById(`reader-item-frame-${i}`);
+    const fallback=document.getElementById(`reader-item-fallback-${i}`);
     // 외부 사이트가 프레임 삽입을 차단하면 감지가 어려우므로, 일정 시간 후 대체 안내를 보여줌
-    readerFallbackTimer=setTimeout(()=>{fallback.classList.add('show');},3000);
-  } else {
-    frame.src='about:blank';
-  }
+    const timer=setTimeout(()=>{fallback.classList.add('show');},3000);
+    readerFallbackTimers.push(timer);
+    frame.addEventListener('load',()=>{clearTimeout(timer);},{once:true});
+  });
+
+  requestAnimationFrame(()=>scrollReaderTo(startIdx||0));
 }
 
 // 오늘 날짜의 읽기표 항목을 찾아 유튜브 카드를 그림
@@ -1819,9 +1852,6 @@ document.getElementById('stats-overlay-close-btn').addEventListener('click',clos
 document.getElementById('admin-toggle-btn').addEventListener('click',toggleAdminUI);
 document.getElementById('admin-passcode-submit').addEventListener('click',submitAdminPasscode);
 document.getElementById('admin-passcode-input').addEventListener('keydown',(e)=>{if(e.key==='Enter')submitAdminPasscode();});
-document.getElementById('reader-prev-btn').addEventListener('click',()=>{if(readerIdx>0){readerIdx--;renderReader();}});
-document.getElementById('reader-next-btn').addEventListener('click',()=>{if(readerIdx<readerItems.length-1){readerIdx++;renderReader();}});
-document.getElementById('reader-frame').addEventListener('load',()=>{if(readerFallbackTimer)clearTimeout(readerFallbackTimer);});
 document.getElementById('login-submit-btn').addEventListener('click',()=>{submitLogin(document.getElementById('login-name-input').value);});
 document.getElementById('login-name-input').addEventListener('keydown',(e)=>{if(e.key==='Enter')submitLogin(document.getElementById('login-name-input').value);});
 document.getElementById('login-skip-btn').addEventListener('click',hideLoginOverlay);
