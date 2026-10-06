@@ -364,7 +364,9 @@ html, body {
   font-size: 11px;
   font-weight: 500;
   flex-shrink: 0;
+  cursor: pointer;
 }
+.chap:active { opacity: 0.6; }
 .chap.done-ot{background:#EAF3DE;color:#3B6D11;border:1px solid #97C459;}
 .chap.done-nt{background:#E6F1FB;color:#185FA5;border:1px solid #85B7EB;}
 .chap.not-in-plan{background:var(--color-background-secondary);color:var(--color-text-tertiary);border:1px solid var(--color-border-tertiary);font-style:italic;}
@@ -1305,8 +1307,8 @@ function renderBookListInto(containerEl,order,type,books,checkedObj,openState,on
       const chapMap=b?b.chapMap:{};
       for(let c=1;c<=totalChaps;c++){
         const keys=chapMap[c];
-        if(!keys)chapHtml+=`<div class="chap not-in-plan">${c}</div>`;
-        else{const done=keys.every(k=>checkedObj[k]);chapHtml+=`<div class="chap ${done?`done-${type}`:'todo'}">${c}</div>`;}
+        if(!keys)chapHtml+=`<div class="chap not-in-plan" data-book="${name}" data-chap="${c}">${c}</div>`;
+        else{const done=keys.every(k=>checkedObj[k]);chapHtml+=`<div class="chap ${done?`done-${type}`:'todo'}" data-book="${name}" data-chap="${c}">${c}</div>`;}
       }
     }
     html+=`<div class="book-item${isOpen?' open':''}" data-book="${name}">
@@ -1327,6 +1329,13 @@ function renderBookListInto(containerEl,order,type,books,checkedObj,openState,on
       const name=h.parentElement.dataset.book;
       openState[name]=!openState[name];
       onToggle();
+    });
+  });
+  containerEl.querySelectorAll('.chap').forEach(c=>{
+    c.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const book=c.dataset.book,chap=c.dataset.chap;
+      openReader([`${book} ${chap}`],0);
     });
   });
 }
