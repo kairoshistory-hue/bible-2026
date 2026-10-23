@@ -1573,6 +1573,16 @@ function getBibleUrl(passage) {
   return `https://prs.app/ko/bible/${code}.${chap}.nkrv`;
 }
 
+// 안드로이드에 설치된 '공동체 성경 읽기' 앱으로 열기 시도 (설치 안 되어 있거나 실패하면 웹 주소로 자동 이동)
+const PRS_ANDROID_PACKAGE = 'org.wdprs.prsbible';
+const IS_ANDROID = /Android/i.test(navigator.userAgent||'');
+function getBibleAppUrl(passage) {
+  const url = getBibleUrl(passage);
+  if (!url || !IS_ANDROID) return url;
+  const noScheme = url.replace(/^https:\/\//, '');
+  return `intent://${noScheme}#Intent;scheme=https;package=${PRS_ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(url)};end`;
+}
+
 // 온누리 공동체 성경읽기 유튜브 플레이리스트 (2026)
 const YOUTUBE_URL = 'https://www.youtube.com/playlist?list=PLDTIobzU1vjPKxJZFUSpylAPoPgENMj6w';
 
@@ -1628,10 +1638,14 @@ function renderReader(startIdx){
 
   const listHtml=readerItems.map((passage,i)=>{
     const url=getBibleUrl(passage);
+    const appUrl=getBibleAppUrl(passage);
+    const extLink=IS_ANDROID
+      ?`<a class="reader-item-link" href="${appUrl||'#'}">📱 앱으로 열기</a>`
+      :`<a class="reader-item-link" href="${url||'#'}" target="_blank" rel="noopener">새 탭 ↗</a>`;
     return `<div class="reader-item" id="reader-item-${i}">
       <div class="reader-item-header">
         <span class="reader-item-title">${passage}</span>
-        <a class="reader-item-link" href="${url||'#'}" target="_blank" rel="noopener">새 탭 ↗</a>
+        ${extLink}
       </div>
       <div class="reader-item-frame-wrap">
         <iframe class="reader-item-frame" id="reader-item-frame-${i}" src="${url||'about:blank'}" title="${passage}"></iframe>
